@@ -1,0 +1,143 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:logger/logger.dart';
+import 'package:weather/core/network/dio_client.dart';
+import 'package:weather/features/weather/data/datasources/local_cache_datasource.dart';
+import 'package:weather/features/weather/data/datasources/open_meteo_api_datasource.dart';
+import 'package:weather/features/weather/data/repositories/weather_repository_impl.dart';
+import 'package:weather/features/weather/domain/usecases/get_current_weather.dart';
+import 'package:weather/features/weather/domain/usecases/get_daily_forecast.dart';
+import 'package:weather/features/weather/domain/usecases/get_hourly_forecast.dart';
+import 'package:weather/features/weather/presentation/bloc/weather_state.dart';
+
+/// Weather notifier that manages weather data fetching.
+class WeatherNotifier extends ChangeNotifier {
+  WeatherNotifier() {
+    _logger = Logger();
+    _initRepository();
+  }
+
+  WeatherState _state = const WeatherInitial();
+  WeatherState get state => _state;
+
+  late final WeatherRepositoryImpl _repository;
+  late final GetCurrentWeather _getCurrentWeather;
+  late final GetHourlyForecast _getHourlyForecast;
+  late final GetDailyForecast _getDailyForecast;
+  late final Logger _logger;
+
+  void _initRepository() {
+    final apiDataSource = OpenMeteoApiDataSource(dio: createDioClient());
+    final cacheDataSource = LocalCacheDataSource();
+
+    _repository = WeatherRepositoryImpl(
+      apiDataSource: apiDataSource,
+      cacheDataSource: cacheDataSource,
+    );
+
+    _getCurrentWeather = GetCurrentWeather(_repository);
+    _getHourlyForecast = GetHourlyForecast(_repository);
+    _getDailyForecast = GetDailyForecast(_repository);
+  }
+
+  /// Initializes the cache and loads weather data.
+  Future<void> init() async {
+    _state = const WeatherLoading();
+    notifyListeners();
+
+    try {
+      await LocalCacheDataSource().init();
+
+      // Get user's location
+      final position = await _determinePosition();
+
+      // Fetch all weather data in parallel
+      final weatherResult = await _getCurrentWeather(
+        latitude: position.latitude,
+        longitude: position.longitude,
+      );
+      final hourlyResult = await _getHourlyForecast(
+        latitude: position.latitude,
+        longitude: position.longitude,
+      );
+      final dailyResult = await _getDailyForecast(
+        latitude: position.latitude,
+        longitude: position.longitude,
+      );
+
+      weatherResult.fold(
+        (failure) {
+          _state = WeatherError(failure.message);
+        },
+        (weather) {
+          hourlyResult.fold(
+            (failure) {
+              _state = WeatherError(failure.message);
+            },
+            (hourly) {
+              dailyResult.fold(
+                (failure) {
+                  _state = WeatherError(failure.message);
+                },
+                (daily) {
+                  _state = WeatherLoaded(
+                    currentWeather: weather,
+                    hourlyForecast: hourly,
+                    dailyForecast: daily,
+                  );
+                },
+              );
+            },
+          );
+        },
+      );
+      notifyListeners();
+    } catch (e) {
+      _logger.e('Error initializing weather: $e');
+      _state = WeatherError('Failed to load weather: $e');
+      notifyListeners();
+    }
+  }
+
+  /// Determines the current position of the device.
+  Future<Position> _determinePosition() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    // Test if location services are enabled.
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return Future.error('Location services are disabled.');
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return Future.error('Location permissions are denied');
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      return Future.error(
+        'Location permissions are permanently denied, we cannot request permissions.',
+      );
+    }
+
+    // When we reach here, permissions are granted and we can continue.
+    return await Geolocator.getCurrentPosition();
+  }
+
+  /// Refreshes weather data.
+  Future<void> refresh() async {
+    _state = const WeatherLoading();
+    notifyListeners();
+    await init();
+  }
+}
+
+/// Provider for the weather notifier.
+final weatherProvider = Provider<WeatherNotifier>(
+  (ref) => WeatherNotifier(),
+);
