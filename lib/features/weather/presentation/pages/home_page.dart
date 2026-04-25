@@ -16,8 +16,8 @@ class HomePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final weatherNotifier = ref.watch(weatherProvider);
-    final weatherState = weatherNotifier.state;
+    final weatherState = ref.watch(weatherProvider);
+    final weatherNotifier = ref.read(weatherProvider.notifier);
 
     return Scaffold(
       body: RefreshIndicator(

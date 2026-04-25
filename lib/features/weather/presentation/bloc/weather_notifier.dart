@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:logger/logger.dart';
@@ -12,28 +11,30 @@ import 'package:weather/features/weather/domain/usecases/get_hourly_forecast.dar
 import 'package:weather/features/weather/presentation/bloc/weather_state.dart';
 
 /// Weather notifier that manages weather data fetching.
-class WeatherNotifier extends ChangeNotifier {
-  WeatherNotifier() {
-    _logger = Logger();
-    _initRepository();
-  }
-
-  WeatherState _state = const WeatherInitial();
-  WeatherState get state => _state;
-
+class WeatherNotifier extends Notifier<WeatherState> {
   late final WeatherRepositoryImpl _repository;
+  late final LocalCacheDataSource _cacheDataSource;
   late final GetCurrentWeather _getCurrentWeather;
   late final GetHourlyForecast _getHourlyForecast;
   late final GetDailyForecast _getDailyForecast;
   late final Logger _logger;
 
+  LocalCacheDataSource get cacheDataSource => _cacheDataSource;
+
+  @override
+  WeatherState build() {
+    _logger = Logger();
+    _initRepository();
+    return const WeatherInitial();
+  }
+
   void _initRepository() {
     final apiDataSource = OpenMeteoApiDataSource(dio: createDioClient());
-    final cacheDataSource = LocalCacheDataSource();
+    _cacheDataSource = LocalCacheDataSource();
 
     _repository = WeatherRepositoryImpl(
       apiDataSource: apiDataSource,
-      cacheDataSource: cacheDataSource,
+      cacheDataSource: _cacheDataSource,
     );
 
     _getCurrentWeather = GetCurrentWeather(_repository);
@@ -43,11 +44,10 @@ class WeatherNotifier extends ChangeNotifier {
 
   /// Initializes the cache and loads weather data.
   Future<void> init() async {
-    _state = const WeatherLoading();
-    notifyListeners();
+    state = const WeatherLoading();
 
     try {
-      await LocalCacheDataSource().init();
+      await _cacheDataSource.init();
 
       // Get user's location
       final position = await _determinePosition();
@@ -68,20 +68,20 @@ class WeatherNotifier extends ChangeNotifier {
 
       weatherResult.fold(
         (failure) {
-          _state = WeatherError(failure.message);
+          state = WeatherError(failure.message);
         },
         (weather) {
           hourlyResult.fold(
             (failure) {
-              _state = WeatherError(failure.message);
+              state = WeatherError(failure.message);
             },
             (hourly) {
               dailyResult.fold(
                 (failure) {
-                  _state = WeatherError(failure.message);
+                  state = WeatherError(failure.message);
                 },
                 (daily) {
-                  _state = WeatherLoaded(
+                  state = WeatherLoaded(
                     currentWeather: weather,
                     hourlyForecast: hourly,
                     dailyForecast: daily,
@@ -92,11 +92,9 @@ class WeatherNotifier extends ChangeNotifier {
           );
         },
       );
-      notifyListeners();
     } catch (e) {
       _logger.e('Error initializing weather: $e');
-      _state = WeatherError('Failed to load weather: $e');
-      notifyListeners();
+      state = WeatherError('Failed to load weather: $e');
     }
   }
 
@@ -131,13 +129,12 @@ class WeatherNotifier extends ChangeNotifier {
 
   /// Refreshes weather data.
   Future<void> refresh() async {
-    _state = const WeatherLoading();
-    notifyListeners();
+    state = const WeatherLoading();
     await init();
   }
 }
 
 /// Provider for the weather notifier.
-final weatherProvider = Provider<WeatherNotifier>(
-  (ref) => WeatherNotifier(),
+final weatherProvider = NotifierProvider<WeatherNotifier, WeatherState>(
+  WeatherNotifier.new,
 );

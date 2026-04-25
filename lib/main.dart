@@ -28,7 +28,9 @@ class WeatherApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // Initialize weather data on app start
-    ref.read(weatherProvider).init();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(weatherProvider.notifier).init();
+    });
 
     return MaterialApp(
       title: 'Weather App',

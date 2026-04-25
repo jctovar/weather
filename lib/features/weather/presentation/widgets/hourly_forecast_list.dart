@@ -26,42 +26,36 @@ class HourlyForecastList extends StatelessWidget {
         final hour = nextHours[index];
 
         return Container(
-          width: 80,
+          width: 72,
           margin: const EdgeInsets.symmetric(horizontal: 4),
           child: Card(
             child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 8,
-                vertical: 12,
-              ),
+              padding: const EdgeInsets.all(6.0),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
                     index == 0 ? 'Ahora' : timeFormat.format(hour.time),
                     style: theme.textTheme.labelSmall,
                   ),
-                  const SizedBox(height: 4),
                   Icon(
                     _getWeatherIcon(hour.weatherCode),
-                    size: 28,
+                    size: 24,
                     color: theme.colorScheme.primary,
                   ),
-                  const SizedBox(height: 4),
                   Text(
                     '${hour.temperature.toStringAsFixed(0)}°',
-                    style: theme.textTheme.labelLarge?.copyWith(
+                    style: theme.textTheme.labelMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  if (hour.precipitationProbability > 0) ...[
-                    const SizedBox(height: 2),
+                  if (hour.precipitationProbability > 0)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
                           Icons.water_drop,
-                          size: 12,
+                          size: 10,
                           color: theme.colorScheme.primary,
                         ),
                         const SizedBox(width: 2),
@@ -71,7 +65,6 @@ class HourlyForecastList extends StatelessWidget {
                         ),
                       ],
                     ),
-                  ],
                 ],
               ),
             ),
