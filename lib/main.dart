@@ -12,7 +12,7 @@ void main() async {
   await Hive.initFlutter();
 
   // Initialize the weather cache
-  await Hive.openBox('weather_box');
+  await Hive.openBox<String>('weather_box');
 
   runApp(
     const ProviderScope(
