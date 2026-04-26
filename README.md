@@ -6,6 +6,8 @@
 
 A modern, feature-rich weather application for Android built with **Flutter** and **Clean Architecture**. Get real-time weather data, hourly forecasts, and 7-day predictions based on your device's GPS location — all powered by the free [Open-Meteo API](https://open-meteo.com) (no API key required).
 
+Includes **background rain alerts**, an **Android home screen widget**, and **offline caching** so your weather is always available.
+
 ---
 
 ## ✨ Features
@@ -20,8 +22,9 @@ A modern, feature-rich weather application for Android built with **Flutter** an
 | 🌙 **Dark Mode** | ✅ | Automatic system theme switching |
 | 💾 **Offline Cache** | ✅ | Hive-based caching with 1-hour TTL |
 | 🔄 **Pull to Refresh** | ✅ | Swipe down to update weather data |
-| 🔔 **Rain Notifications** | 🚧 | Planned (see [PLAN.md](PLAN.md)) |
-| 📱 **Home Widget** | 🚧 | Planned (see [PLAN.md](PLAN.md)) |
+| 🔔 **Rain Notifications** | ✅ | Background alerts when rain ≥70% in next 3h |
+| 📱 **Home Widget** | ✅ | Android 4×2 widget with current weather |
+| 🔒 **Security Hardened** | ✅ | Release keystore, ProGuard, log redaction |
 
 > 🚧 = Planned feature (see [PLAN.md](PLAN.md) for roadmap)
 
@@ -57,6 +60,15 @@ A modern, feature-rich weather application for Android built with **Flutter** an
 | [dio](https://pub.dev/packages/dio) | HTTP Client with interceptors |
 | [hive](https://pub.dev/packages/hive) | Local NoSQL Database |
 | [dartz](https://pub.dev/packages/dartz) | Functional Programming (Either type) |
+| [shared_preferences](https://pub.dev/packages/shared_preferences) | Simple key-value settings storage |
+
+### Background & Platform
+| Technology | Purpose |
+|------------|---------|
+| [workmanager](https://pub.dev/packages/workmanager) | Periodic background tasks (hourly weather + rain checks) |
+| [flutter_local_notifications](https://pub.dev/packages/flutter_local_notifications) | Local rain alerts with Android notification channels |
+| [home_widget](https://pub.dev/packages/home_widget) | Flutter ↔ Android AppWidget data sync |
+| [permission_handler](https://pub.dev/packages/permission_handler) | Runtime permission requests (location, notifications) |
 
 ### Location
 | Technology | Purpose |
@@ -78,26 +90,37 @@ This project follows **Clean Architecture** with 3 layers:
 
 ```
 lib/
-├── main.dart                      # Entry point — initializes Hive + ProviderScope
+├── main.dart                      # Entry point — initializes Hive, WorkManager, notifications, widget
+├── background/
+│   └── workmanager_callback.dart  # Top-level entry point for periodic background tasks
 ├── core/
-│   ├── constants/                 # App constants, API endpoints
+│   ├── constants/                 # App constants, API endpoints, notification keys
 │   ├── error/                     # Failure classes (Network, Cache, Location)
 │   ├── network/                   # Dio client configuration
 │   ├── theme/                     # Material 3 light/dark themes
 │   └── utils/                     # Shared utilities (JSON helpers, weather mapper, logger)
-└── features/weather/
-    ├── data/
-    │   ├── datasources/           # API & local cache data sources
-    │   ├── models/                # DTOs (WeatherModel, HourlyForecastModel, DailyForecastModel)
-    │   └── repositories/          # WeatherRepositoryImpl
-    ├── domain/
-    │   ├── entities/              # Business entities (Weather, HourlyForecast, DailyForecast)
-    │   ├── repositories/          # Abstract repository contracts
-    │   └── usecases/              # GetCurrentWeather, GetHourlyForecast, GetDailyForecast
-    └── presentation/
-        ├── bloc/                  # Riverpod Notifier + State classes
-        ├── pages/                 # HomePage
-        └── widgets/               # CurrentWeatherCard, HourlyForecastList, DailyForecastList
+├── features/
+│   ├── weather/
+│   │   ├── data/
+│   │   │   ├── datasources/       # OpenMeteoApiDataSource, LocalCacheDataSource
+│   │   │   ├── models/            # DTOs (WeatherModel, HourlyForecastModel, DailyForecastModel)
+│   │   │   └── repositories/      # WeatherRepositoryImpl
+│   │   ├── domain/
+│   │   │   ├── entities/          # Weather, HourlyForecast, DailyForecast
+│   │   │   ├── repositories/      # WeatherRepository (abstract)
+│   │   │   └── usecases/          # GetCurrentWeather, GetHourlyForecast, GetDailyForecast
+│   │   └── presentation/
+│   │       ├── bloc/              # WeatherNotifier + WeatherState
+│   │       ├── pages/             # HomePage
+│   │       └── widgets/           # CurrentWeatherCard, HourlyForecastList, DailyForecastList
+│   ├── notifications/
+│   │   ├── domain/usecases/       # shouldNotifyRain, getRainNotificationMessage
+│   │   ├── data/services/         # NotificationService, BackgroundCheckService
+│   │   └── presentation/
+│   │       ├── providers/         # NotificationSettingsNotifier (Riverpod)
+│   │       └── widgets/           # NotificationSettingsSheet (BottomSheet)
+│   └── home_widget/
+│       └── data/services/         # HomeWidgetService (Flutter ↔ Android sync)
 ```
 
 ### Key Architectural Decisions
@@ -217,15 +240,28 @@ flutter test --coverage
 
 ## 📋 Roadmap
 
-See [PLAN.md](PLAN.md) for the complete development plan. Key upcoming features:
+See [PLAN.md](PLAN.md) for the complete development plan.
+
+### ✅ Completed
+
+| Phase | Feature | Status |
+|-------|---------|--------|
+| Phase 1 | 🏗️ Clean Architecture + Riverpod setup | ✅ |
+| Phase 1 | 🌤️ Current weather + hourly + daily forecasts | ✅ |
+| Phase 1 | 💾 Hive cache with TTL | ✅ |
+| Phase 2 | 🔔 Rain notifications (WorkManager + local notifications) | ✅ |
+| Phase 2 | ⏰ Background hourly updates | ✅ |
+| Phase 3 | 📱 Android home screen widget | ✅ |
+| Security | 🔒 Release keystore, ProGuard, coordinate redaction | ✅ |
+
+### 🚧 Upcoming
 
 | Phase | Feature | Priority |
 |-------|---------|----------|
-| Phase 2 | 🔔 Rain notifications | High |
-| Phase 2 | ⏰ Background hourly updates | High |
-| Phase 3 | 📱 Android home screen widget | Medium |
-| Phase 4 | 🎨 Animations & polish | Medium |
+| Phase 4 | 🎨 Animations & Lottie polish | Medium |
 | Phase 4 | 🌍 Multiple saved locations | Low |
+| Phase 5 | 🌬️ Air quality integration | Low |
+| Phase 5 | 🔲 Quick Settings Tile | Low |
 
 ---
 
@@ -238,6 +274,20 @@ Contributions are welcome! Please follow these steps:
 3. Commit your changes (`git commit -m 'Add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+### Android Build Notes
+
+This project uses **core library desugaring** (required by `flutter_local_notifications` v18 for `java.time` APIs on Android API < 26). Already configured in `android/app/build.gradle.kts`:
+
+```kotlin
+compileOptions {
+    isCoreLibraryDesugaringEnabled = true
+}
+
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+}
+```
 
 ### Before Committing
 
