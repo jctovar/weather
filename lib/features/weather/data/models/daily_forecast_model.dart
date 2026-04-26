@@ -16,35 +16,46 @@ class DailyForecastModel {
   });
 
   factory DailyForecastModel.fromJson(Map<String, dynamic> json) {
-    final daily = json['daily'] as Map<String, dynamic>;
+    final daily = requireMap(json['daily'], 'daily');
 
     return DailyForecastModel(
-      dates: (daily['time'] as List<dynamic>)
+      dates: requireList(daily['time'], 'daily.time')
           .map((e) => DateTime.parse(e as String))
           .toList(),
-      weatherCodes: (daily['weather_code'] as List<dynamic>)
+      weatherCodes: requireList(daily['weather_code'], 'daily.weather_code')
           .map((e) => jsonToInt(e))
           .toList(),
-      temperatureMaxes: (daily['temperature_2m_max'] as List<dynamic>)
+      temperatureMaxes: requireList(
+        daily['temperature_2m_max'],
+        'daily.temperature_2m_max',
+      )
           .map((e) => jsonToDouble(e))
           .toList(),
-      temperatureMins: (daily['temperature_2m_min'] as List<dynamic>)
+      temperatureMins: requireList(
+        daily['temperature_2m_min'],
+        'daily.temperature_2m_min',
+      )
           .map((e) => jsonToDouble(e))
           .toList(),
-      sunrises: (daily['sunrise'] as List<dynamic>)
+      sunrises: requireList(daily['sunrise'], 'daily.sunrise')
           .map((e) => DateTime.parse(e as String))
           .toList(),
-      sunsets: (daily['sunset'] as List<dynamic>)
+      sunsets: requireList(daily['sunset'], 'daily.sunset')
           .map((e) => DateTime.parse(e as String))
           .toList(),
-      uvIndexMaxes: (daily['uv_index_max'] as List<dynamic>)
+      uvIndexMaxes: requireList(daily['uv_index_max'], 'daily.uv_index_max')
           .map((e) => jsonToDouble(e))
           .toList(),
-      precipitationSums: (daily['precipitation_sum'] as List<dynamic>)
+      precipitationSums: requireList(
+        daily['precipitation_sum'],
+        'daily.precipitation_sum',
+      )
           .map((e) => jsonToDouble(e))
           .toList(),
-      precipitationProbabilityMaxes: (daily['precipitation_probability_max']
-              as List<dynamic>)
+      precipitationProbabilityMaxes: requireList(
+        daily['precipitation_probability_max'],
+        'daily.precipitation_probability_max',
+      )
           .map((e) => jsonToDouble(e))
           .toList(),
     );

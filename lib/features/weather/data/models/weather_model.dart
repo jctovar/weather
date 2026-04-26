@@ -27,7 +27,7 @@ class WeatherModel {
   final DateTime time;
 
   factory WeatherModel.fromJson(Map<String, dynamic> json) {
-    final current = json['current'] as Map<String, dynamic>;
+    final current = requireMap(json['current'], 'current');
 
     return WeatherModel(
       temperature: jsonToDouble(current['temperature_2m']),

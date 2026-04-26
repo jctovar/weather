@@ -26,3 +26,17 @@ int jsonToInt(dynamic value) {
     return 0;
   }
 }
+
+/// Validates that [value] is a non-null [Map<String, dynamic>].
+/// Throws [FormatException] with [field] context otherwise.
+Map<String, dynamic> requireMap(dynamic value, String field) {
+  if (value is Map<String, dynamic>) return value;
+  throw FormatException('Expected Map for "$field", got ${value.runtimeType}');
+}
+
+/// Validates that [value] is a non-null [List<dynamic>].
+/// Throws [FormatException] with [field] context otherwise.
+List<dynamic> requireList(dynamic value, String field) {
+  if (value is List<dynamic>) return value;
+  throw FormatException('Expected List for "$field", got ${value.runtimeType}');
+}

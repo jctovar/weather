@@ -21,6 +21,9 @@ class WeatherNotifier extends Notifier<WeatherState> {
   late final GetHourlyForecast _getHourlyForecast;
   late final GetDailyForecast _getDailyForecast;
 
+  /// Prevents concurrent weather fetches.
+  bool _isLoading = false;
+
   LocalCacheDataSource get cacheDataSource => _cacheDataSource;
 
   @override
@@ -56,7 +59,10 @@ class WeatherNotifier extends Notifier<WeatherState> {
 
   /// Initializes cache, resolves device location, then fetches current,
   /// hourly and daily weather. Falls back to [WeatherError] on any failure.
+  /// Ignored if a fetch is already in progress.
   Future<void> init() async {
+    if (_isLoading) return;
+    _isLoading = true;
     state = const WeatherLoading();
 
     try {
@@ -105,6 +111,8 @@ class WeatherNotifier extends Notifier<WeatherState> {
       state = const WeatherError(
         'No se pudo cargar el clima. Verifica tu conexión e inténtalo de nuevo.',
       );
+    } finally {
+      _isLoading = false;
     }
   }
 

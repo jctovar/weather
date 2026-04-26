@@ -13,26 +13,28 @@ class HourlyForecastModel {
   });
 
   factory HourlyForecastModel.fromJson(Map<String, dynamic> json) {
-    final hourly = json['hourly'] as Map<String, dynamic>;
+    final hourly = requireMap(json['hourly'], 'hourly');
 
     return HourlyForecastModel(
-      times: (hourly['time'] as List<dynamic>)
+      times: requireList(hourly['time'], 'hourly.time')
           .map((e) => DateTime.parse(e as String))
           .toList(),
-      temperatures: (hourly['temperature_2m'] as List<dynamic>)
+      temperatures: requireList(hourly['temperature_2m'], 'hourly.temperature_2m')
           .map((e) => jsonToDouble(e))
           .toList(),
-      precipitationProbabilities: (hourly['precipitation_probability']
-              as List<dynamic>)
+      precipitationProbabilities: requireList(
+        hourly['precipitation_probability'],
+        'hourly.precipitation_probability',
+      )
           .map((e) => jsonToDouble(e))
           .toList(),
-      precipitations: (hourly['precipitation'] as List<dynamic>)
+      precipitations: requireList(hourly['precipitation'], 'hourly.precipitation')
           .map((e) => jsonToDouble(e))
           .toList(),
-      weatherCodes: (hourly['weather_code'] as List<dynamic>)
+      weatherCodes: requireList(hourly['weather_code'], 'hourly.weather_code')
           .map((e) => jsonToInt(e))
           .toList(),
-      windSpeeds: (hourly['wind_speed_10m'] as List<dynamic>)
+      windSpeeds: requireList(hourly['wind_speed_10m'], 'hourly.wind_speed_10m')
           .map((e) => jsonToDouble(e))
           .toList(),
     );
