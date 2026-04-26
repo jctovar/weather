@@ -4,6 +4,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:weather/background/workmanager_callback.dart';
 import 'package:weather/core/theme/app_theme.dart';
+import 'package:weather/features/home_widget/data/services/home_widget_service.dart';
 import 'package:weather/features/notifications/data/services/notification_service.dart';
 import 'package:weather/features/weather/presentation/bloc/weather_notifier.dart';
 import 'package:weather/features/weather/presentation/pages/home_page.dart';
@@ -17,6 +18,9 @@ void main() async {
 
   // Initialize local notifications
   await NotificationService.init();
+
+  // Initialize home screen widget
+  await HomeWidgetService.init();
 
   // Initialize WorkManager for background rain checks
   await Workmanager().initialize(callbackDispatcher);

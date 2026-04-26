@@ -42,6 +42,10 @@
     @com.hive.annotations.HiveField *;
 }
 
+# home_widget
+-keep class es.antonborri.home_widget.** { *; }
+-keep class com.fanguye.weather.** { *; }
+
 # General
 -keepclassmembers enum * {
     public static **[] values();

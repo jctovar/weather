@@ -1,6 +1,8 @@
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:weather/core/constants/app_constants.dart';
 import 'package:weather/core/utils/app_logger.dart';
+import 'package:weather/core/utils/weather_code_mapper.dart';
+import 'package:weather/features/home_widget/data/services/home_widget_service.dart';
 import 'package:weather/features/notifications/data/services/notification_service.dart';
 import 'package:weather/features/notifications/domain/usecases/get_rain_notification_message.dart';
 import 'package:weather/features/notifications/domain/usecases/should_notify_rain.dart';
@@ -63,8 +65,33 @@ class BackgroundCheckService {
       ).toList();
       final message = getRainNotificationMessage(matching);
       await NotificationService.showRainNotification(message);
+
+      // Update home widget with current weather
+      await _updateWidget(location);
     } catch (e) {
       AppLogger.error('Background rain check failed: $e');
+    }
+  }
+
+  Future<void> _updateWidget(({double lat, double lon}) location) async {
+    try {
+      final api = OpenMeteoApiDataSource();
+      final currentModel = await api.getCurrentWeather(
+        latitude: location.lat,
+        longitude: location.lon,
+      );
+      final current = currentModel.toEntity();
+
+      await HomeWidgetService.saveWeatherData(
+        locationName: '', // Keep existing location name
+        temperature: current.temperature,
+        weatherCode: current.weatherCode,
+        isDay: current.isDay,
+        description: WeatherCodeMapper.description(current.weatherCode),
+      );
+      AppLogger.info('Home widget updated from background');
+    } catch (e) {
+      AppLogger.error('Failed to update widget in background: $e');
     }
   }
 }

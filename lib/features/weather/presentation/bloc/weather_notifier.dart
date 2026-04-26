@@ -5,6 +5,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:weather/core/error/failures.dart';
 import 'package:weather/core/network/dio_client.dart';
 import 'package:weather/core/utils/app_logger.dart';
+import 'package:weather/core/utils/weather_code_mapper.dart';
+import 'package:weather/features/home_widget/data/services/home_widget_service.dart';
 import 'package:weather/features/weather/data/datasources/local_cache_datasource.dart';
 import 'package:weather/features/weather/data/datasources/open_meteo_api_datasource.dart';
 import 'package:weather/features/weather/data/repositories/weather_repository_impl.dart';
@@ -111,6 +113,17 @@ class WeatherNotifier extends Notifier<WeatherState> {
         hourlyForecast: hourly,
         dailyForecast: daily,
         locationName: locationName,
+      );
+
+      // Update home screen widget
+      await HomeWidgetService.saveWeatherData(
+        locationName: locationName,
+        temperature: weather.temperature,
+        weatherCode: weather.weatherCode,
+        isDay: weather.isDay,
+        description: WeatherCodeMapper.description(weather.weatherCode),
+        tempMax: daily.isNotEmpty ? daily.first.temperatureMax : null,
+        tempMin: daily.isNotEmpty ? daily.first.temperatureMin : null,
       );
     } catch (e) {
       AppLogger.error('Failed to initialize weather: $e');
