@@ -40,7 +40,7 @@ class NotificationSettingsNotifier extends Notifier<bool> {
         minutes: AppConstants.rainCheckIntervalMinutes,
       ),
       constraints: Constraints(networkType: NetworkType.connected),
-      existingWorkPolicy: ExistingWorkPolicy.keep,
+      existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
     );
   }
 }

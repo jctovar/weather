@@ -18,7 +18,9 @@ class NotificationService {
     const initializationSettings = InitializationSettings(
       android: androidSettings,
     );
-    await _plugin.initialize(initializationSettings);
+    await _plugin.initialize(
+      settings: initializationSettings,
+    );
     await _createChannel();
     _initialized = true;
     AppLogger.info('Notification service initialized');
@@ -52,10 +54,10 @@ class NotificationService {
   /// Displays a rain notification and records the timestamp.
   static Future<void> showRainNotification(String message) async {
     await _plugin.show(
-      0,
-      AppConstants.rainNotificationChannelName,
-      message,
-      const NotificationDetails(
+      id: 0,
+      title: AppConstants.rainNotificationChannelName,
+      body: message,
+      notificationDetails: const NotificationDetails(
         android: AndroidNotificationDetails(
           AppConstants.rainNotificationChannelId,
           AppConstants.rainNotificationChannelName,
