@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:logger/logger.dart';
 import 'package:weather/core/network/dio_client.dart';
+import 'package:weather/core/utils/app_logger.dart';
 import 'package:weather/features/weather/data/datasources/local_cache_datasource.dart';
 import 'package:weather/features/weather/data/datasources/open_meteo_api_datasource.dart';
 import 'package:weather/features/weather/data/repositories/weather_repository_impl.dart';
@@ -17,13 +17,11 @@ class WeatherNotifier extends Notifier<WeatherState> {
   late final GetCurrentWeather _getCurrentWeather;
   late final GetHourlyForecast _getHourlyForecast;
   late final GetDailyForecast _getDailyForecast;
-  late final Logger _logger;
 
   LocalCacheDataSource get cacheDataSource => _cacheDataSource;
 
   @override
   WeatherState build() {
-    _logger = Logger();
     _initRepository();
     return const WeatherInitial();
   }
@@ -93,7 +91,7 @@ class WeatherNotifier extends Notifier<WeatherState> {
         },
       );
     } catch (e) {
-      _logger.e('Error initializing weather: $e');
+      AppLogger.error('Failed to initialize weather: $e');
       state = WeatherError('Failed to load weather: $e');
     }
   }
@@ -106,25 +104,31 @@ class WeatherNotifier extends Notifier<WeatherState> {
     // Test if location services are enabled.
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
+      AppLogger.error('Location services are disabled');
       return Future.error('Location services are disabled.');
     }
 
     permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
+      AppLogger.warn('Location permission denied, requesting...');
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
+        AppLogger.error('Location permissions denied');
         return Future.error('Location permissions are denied');
       }
     }
 
     if (permission == LocationPermission.deniedForever) {
+      AppLogger.error('Location permissions permanently denied');
       return Future.error(
         'Location permissions are permanently denied, we cannot request permissions.',
       );
     }
 
     // When we reach here, permissions are granted and we can continue.
-    return await Geolocator.getCurrentPosition();
+    final position = await Geolocator.getCurrentPosition();
+    AppLogger.location('Got position: ${position.latitude}, ${position.longitude}');
+    return position;
   }
 
   /// Refreshes weather data.

@@ -1,8 +1,8 @@
 import 'dart:convert';
 
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:logger/logger.dart';
 import 'package:weather/core/constants/app_constants.dart';
+import 'package:weather/core/utils/app_logger.dart';
 import 'package:weather/features/weather/data/models/daily_forecast_model.dart';
 import 'package:weather/features/weather/data/models/hourly_forecast_model.dart';
 import 'package:weather/features/weather/data/models/weather_model.dart';
@@ -16,18 +16,19 @@ class CacheException implements Exception {
 
 /// Local cache data source using Hive.
 class LocalCacheDataSource {
-  LocalCacheDataSource() : _logger = Logger();
+  LocalCacheDataSource();
 
-  final Logger _logger;
   Box<String>? _box;
 
   /// Initializes the Hive box for caching.
   Future<void> init() async {
     try {
-      _box = await Hive.openBox<String>(AppConstants.weatherBoxName);
-      _logger.d('Cache initialized');
+      _box = Hive.isBoxOpen(AppConstants.weatherBoxName)
+          ? Hive.box<String>(AppConstants.weatherBoxName)
+          : await Hive.openBox<String>(AppConstants.weatherBoxName);
+      AppLogger.cache('Cache initialized');
     } catch (e) {
-      _logger.e('Failed to initialize cache: $e');
+      AppLogger.error('Failed to initialize cache: $e');
       rethrow;
     }
   }
@@ -43,7 +44,7 @@ class LocalCacheDataSource {
 
       if (DateTime.now().difference(timestamp).inSeconds >
           AppConstants.cacheTtlSeconds) {
-        _logger.d('Cache expired for current weather');
+        AppLogger.cache('Current weather expired, clearing');
         await clearCurrentWeather();
         return null;
       }
@@ -52,7 +53,7 @@ class LocalCacheDataSource {
         cached['data'] as Map<String, dynamic>,
       );
     } catch (e) {
-      _logger.e('Error reading cache: $e');
+      AppLogger.error('Error reading cache: $e');
       return null;
     }
   }
@@ -81,9 +82,9 @@ class LocalCacheDataSource {
         AppConstants.currentWeatherKey,
         jsonEncode(data),
       );
-      _logger.d('Current weather cached');
+      AppLogger.cache('Current weather cached (${weather.temperature}°C)');
     } catch (e) {
-      _logger.e('Error saving to cache: $e');
+      AppLogger.error('Error saving to cache: $e');
       throw CacheException('Failed to save weather data: $e');
     }
   }
@@ -104,7 +105,7 @@ class LocalCacheDataSource {
 
       if (DateTime.now().difference(timestamp).inSeconds >
           AppConstants.cacheTtlSeconds) {
-        _logger.d('Cache expired for hourly forecast');
+        AppLogger.cache('Hourly forecast expired, clearing');
         await clearHourlyForecast();
         return null;
       }
@@ -113,7 +114,7 @@ class LocalCacheDataSource {
         cached['data'] as Map<String, dynamic>,
       );
     } catch (e) {
-      _logger.e('Error reading hourly forecast cache: $e');
+      AppLogger.error('Error reading hourly forecast cache: $e');
       return null;
     }
   }
@@ -139,9 +140,9 @@ class LocalCacheDataSource {
         AppConstants.hourlyForecastKey,
         jsonEncode(data),
       );
-      _logger.d('Hourly forecast cached');
+      AppLogger.cache('Hourly forecast cached (${forecast.times.length} entries)');
     } catch (e) {
-      _logger.e('Error saving hourly forecast to cache: $e');
+      AppLogger.error('Error saving hourly forecast to cache: $e');
       throw CacheException('Failed to save hourly forecast: $e');
     }
   }
@@ -162,7 +163,7 @@ class LocalCacheDataSource {
 
       if (DateTime.now().difference(timestamp).inSeconds >
           AppConstants.cacheTtlSeconds) {
-        _logger.d('Cache expired for daily forecast');
+        AppLogger.cache('Daily forecast expired, clearing');
         await clearDailyForecast();
         return null;
       }
@@ -171,7 +172,7 @@ class LocalCacheDataSource {
         cached['data'] as Map<String, dynamic>,
       );
     } catch (e) {
-      _logger.e('Error reading daily forecast cache: $e');
+      AppLogger.error('Error reading daily forecast cache: $e');
       return null;
     }
   }
@@ -201,9 +202,9 @@ class LocalCacheDataSource {
         AppConstants.dailyForecastKey,
         jsonEncode(data),
       );
-      _logger.d('Daily forecast cached');
+      AppLogger.cache('Daily forecast cached (${forecast.dates.length} days)');
     } catch (e) {
-      _logger.e('Error saving daily forecast to cache: $e');
+      AppLogger.error('Error saving daily forecast to cache: $e');
       throw CacheException('Failed to save daily forecast: $e');
     }
   }
@@ -216,6 +217,6 @@ class LocalCacheDataSource {
   /// Clears all cached data.
   Future<void> clearAll() async {
     await _box?.clear();
-    _logger.d('All cache cleared');
+    AppLogger.cache('All cache cleared');
   }
 }

@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
-import 'package:logger/logger.dart';
 import 'package:weather/core/network/dio_client.dart';
+import 'package:weather/core/utils/app_logger.dart';
 import 'package:weather/features/weather/data/models/daily_forecast_model.dart';
 import 'package:weather/features/weather/data/models/hourly_forecast_model.dart';
 import 'package:weather/features/weather/data/models/weather_model.dart';
@@ -15,11 +15,9 @@ class OpenMeteoApiException implements Exception {
 /// Data source for fetching weather data from Open-Meteo API.
 class OpenMeteoApiDataSource {
   OpenMeteoApiDataSource({Dio? dio})
-      : _dio = dio ?? createDioClient(),
-        _logger = Logger();
+      : _dio = dio ?? createDioClient();
 
   final Dio _dio;
-  final Logger _logger;
 
   /// Fetches current weather data.
   Future<WeatherModel> getCurrentWeather({
@@ -27,7 +25,9 @@ class OpenMeteoApiDataSource {
     required double longitude,
   }) async {
     try {
-      _logger.d('Fetching current weather for ($latitude, $longitude)');
+      AppLogger.api(
+        'Fetching current weather for ($latitude, $longitude)',
+      );
 
       final response = await _dio.get(
         '/forecast',
@@ -48,10 +48,10 @@ class OpenMeteoApiDataSource {
         );
       }
     } on DioException catch (e) {
-      _logger.e('Dio error fetching weather: ${e.message}');
+      AppLogger.error('Dio error fetching weather: ${e.message}');
       throw OpenMeteoApiException('Network error: ${e.message}');
     } catch (e) {
-      _logger.e('Unexpected error fetching weather: $e');
+      AppLogger.error('Unexpected error fetching weather: $e');
       rethrow;
     }
   }
@@ -62,7 +62,9 @@ class OpenMeteoApiDataSource {
     required double longitude,
   }) async {
     try {
-      _logger.d('Fetching hourly forecast for ($latitude, $longitude)');
+      AppLogger.api(
+        'Fetching hourly forecast for ($latitude, $longitude)',
+      );
 
       final response = await _dio.get(
         '/forecast',
@@ -86,10 +88,10 @@ class OpenMeteoApiDataSource {
         );
       }
     } on DioException catch (e) {
-      _logger.e('Dio error fetching hourly forecast: ${e.message}');
+      AppLogger.error('Dio error fetching hourly forecast: ${e.message}');
       throw OpenMeteoApiException('Network error: ${e.message}');
     } catch (e) {
-      _logger.e('Unexpected error fetching hourly forecast: $e');
+      AppLogger.error('Unexpected error fetching hourly forecast: $e');
       rethrow;
     }
   }
@@ -100,7 +102,9 @@ class OpenMeteoApiDataSource {
     required double longitude,
   }) async {
     try {
-      _logger.d('Fetching daily forecast for ($latitude, $longitude)');
+      AppLogger.api(
+        'Fetching daily forecast for ($latitude, $longitude)',
+      );
 
       final response = await _dio.get(
         '/forecast',
@@ -124,10 +128,10 @@ class OpenMeteoApiDataSource {
         );
       }
     } on DioException catch (e) {
-      _logger.e('Dio error fetching daily forecast: ${e.message}');
+      AppLogger.error('Dio error fetching daily forecast: ${e.message}');
       throw OpenMeteoApiException('Network error: ${e.message}');
     } catch (e) {
-      _logger.e('Unexpected error fetching daily forecast: $e');
+      AppLogger.error('Unexpected error fetching daily forecast: $e');
       rethrow;
     }
   }
