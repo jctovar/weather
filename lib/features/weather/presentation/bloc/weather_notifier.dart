@@ -1,6 +1,8 @@
+import 'package:dartz/dartz.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:weather/core/error/failures.dart';
 import 'package:weather/core/network/dio_client.dart';
 import 'package:weather/core/utils/app_logger.dart';
 import 'package:weather/features/weather/data/datasources/local_cache_datasource.dart';
@@ -41,6 +43,17 @@ class WeatherNotifier extends Notifier<WeatherState> {
     _getDailyForecast = GetDailyForecast(_repository);
   }
 
+  /// Unwraps an Either result, setting error state on failure.
+  T? _unwrap<T>(Either<Failure, T> result) {
+    return result.fold(
+      (failure) {
+        state = WeatherError(failure.message);
+        return null;
+      },
+      (data) => data,
+    );
+  }
+
   /// Initializes the cache and loads weather data.
   Future<void> init() async {
     state = const WeatherLoading();
@@ -57,7 +70,7 @@ class WeatherNotifier extends Notifier<WeatherState> {
         position.longitude,
       );
 
-      // Fetch all weather data in parallel
+      // Fetch all weather data
       final weatherResult = await _getCurrentWeather(
         latitude: position.latitude,
         longitude: position.longitude,
@@ -71,32 +84,20 @@ class WeatherNotifier extends Notifier<WeatherState> {
         longitude: position.longitude,
       );
 
-      weatherResult.fold(
-        (failure) {
-          state = WeatherError(failure.message);
-        },
-        (weather) {
-          hourlyResult.fold(
-            (failure) {
-              state = WeatherError(failure.message);
-            },
-            (hourly) {
-              dailyResult.fold(
-                (failure) {
-                  state = WeatherError(failure.message);
-                },
-                (daily) {
-                  state = WeatherLoaded(
-                    currentWeather: weather,
-                    hourlyForecast: hourly,
-                    dailyForecast: daily,
-                    locationName: locationName,
-                  );
-                },
-              );
-            },
-          );
-        },
+      final weather = _unwrap(weatherResult);
+      if (weather == null) return;
+
+      final hourly = _unwrap(hourlyResult);
+      if (hourly == null) return;
+
+      final daily = _unwrap(dailyResult);
+      if (daily == null) return;
+
+      state = WeatherLoaded(
+        currentWeather: weather,
+        hourlyForecast: hourly,
+        dailyForecast: daily,
+        locationName: locationName,
       );
     } catch (e) {
       AppLogger.error('Failed to initialize weather: $e');
