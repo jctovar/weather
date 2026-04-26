@@ -8,6 +8,7 @@ import 'package:weather/features/weather/presentation/bloc/weather_notifier.dart
 import 'package:weather/features/weather/presentation/bloc/weather_state.dart';
 import 'package:weather/features/weather/presentation/widgets/current_weather_card.dart';
 import 'package:weather/features/weather/presentation/widgets/daily_forecast_list.dart';
+import 'package:weather/features/notifications/presentation/widgets/notification_settings_sheet.dart';
 import 'package:weather/features/weather/presentation/widgets/hourly_forecast_list.dart';
 
 /// Home page displaying current weather and forecasts.
@@ -94,6 +95,15 @@ class HomePage extends ConsumerWidget {
               icon: const Icon(Icons.refresh),
               onPressed: () {
                 weatherNotifier.refresh();
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.settings_outlined),
+              onPressed: () {
+                showModalBottomSheet(
+                  context: context,
+                  builder: (_) => const NotificationSettingsSheet(),
+                );
               },
             ),
           ],

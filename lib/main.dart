@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:workmanager/workmanager.dart';
+import 'package:weather/background/workmanager_callback.dart';
 import 'package:weather/core/theme/app_theme.dart';
+import 'package:weather/features/notifications/data/services/notification_service.dart';
 import 'package:weather/features/weather/presentation/bloc/weather_notifier.dart';
 import 'package:weather/features/weather/presentation/pages/home_page.dart';
 
@@ -10,9 +13,13 @@ void main() async {
 
   // Initialize Hive for local caching
   await Hive.initFlutter();
-
-  // Initialize the weather cache
   await Hive.openBox<String>('weather_box');
+
+  // Initialize local notifications
+  await NotificationService.init();
+
+  // Initialize WorkManager for background rain checks
+  await Workmanager().initialize(callbackDispatcher);
 
   runApp(
     const ProviderScope(

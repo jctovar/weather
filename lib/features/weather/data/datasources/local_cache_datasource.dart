@@ -167,6 +167,37 @@ class LocalCacheDataSource {
     await _box?.delete(AppConstants.dailyForecastKey);
   }
 
+  // ── Last known location (for background tasks) ──────────────
+
+  /// Persists the last known coordinates for background use.
+  Future<void> saveLastLocation(double latitude, double longitude) async {
+    try {
+      await _box?.put(
+        AppConstants.lastLocationKey,
+        jsonEncode({'lat': latitude, 'lon': longitude}),
+      );
+      AppLogger.cache('Last location saved');
+    } catch (e) {
+      AppLogger.error('Error saving last location: $e');
+    }
+  }
+
+  /// Reads the last known coordinates from cache.
+  ({double lat, double lon})? getLastLocation() {
+    try {
+      final data = _box?.get(AppConstants.lastLocationKey);
+      if (data == null) return null;
+      final decoded = jsonDecode(data) as Map<String, dynamic>;
+      return (
+        lat: (decoded['lat'] as num).toDouble(),
+        lon: (decoded['lon'] as num).toDouble(),
+      );
+    } catch (e) {
+      AppLogger.error('Error reading last location: $e');
+      return null;
+    }
+  }
+
   // ── All cache ─────────────────────────────────────────────────
 
   Future<void> clearAll() async {

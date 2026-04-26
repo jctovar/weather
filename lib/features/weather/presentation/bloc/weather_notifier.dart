@@ -71,6 +71,12 @@ class WeatherNotifier extends Notifier<WeatherState> {
       // Get user's location
       final position = await _determinePosition();
 
+      // Save location for background tasks
+      await _cacheDataSource.saveLastLocation(
+        position.latitude,
+        position.longitude,
+      );
+
       // Resolve location name via reverse geocoding
       final locationName = await _resolveLocationName(
         position.latitude,
