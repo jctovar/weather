@@ -1,3 +1,4 @@
+import 'package:weather/core/utils/json_helpers.dart';
 import 'package:weather/features/weather/domain/entities/daily_forecast.dart';
 
 /// Data model for daily forecast from Open-Meteo API.
@@ -22,13 +23,13 @@ class DailyForecastModel {
           .map((e) => DateTime.parse(e as String))
           .toList(),
       weatherCodes: (daily['weather_code'] as List<dynamic>)
-          .map((e) => _toInt(e))
+          .map((e) => jsonToInt(e))
           .toList(),
       temperatureMaxes: (daily['temperature_2m_max'] as List<dynamic>)
-          .map((e) => _toDouble(e))
+          .map((e) => jsonToDouble(e))
           .toList(),
       temperatureMins: (daily['temperature_2m_min'] as List<dynamic>)
-          .map((e) => _toDouble(e))
+          .map((e) => jsonToDouble(e))
           .toList(),
       sunrises: (daily['sunrise'] as List<dynamic>)
           .map((e) => DateTime.parse(e as String))
@@ -37,14 +38,14 @@ class DailyForecastModel {
           .map((e) => DateTime.parse(e as String))
           .toList(),
       uvIndexMaxes: (daily['uv_index_max'] as List<dynamic>)
-          .map((e) => _toDouble(e))
+          .map((e) => jsonToDouble(e))
           .toList(),
       precipitationSums: (daily['precipitation_sum'] as List<dynamic>)
-          .map((e) => _toDouble(e))
+          .map((e) => jsonToDouble(e))
           .toList(),
       precipitationProbabilityMaxes: (daily['precipitation_probability_max']
               as List<dynamic>)
-          .map((e) => _toDouble(e))
+          .map((e) => jsonToDouble(e))
           .toList(),
     );
   }
@@ -74,15 +75,5 @@ class DailyForecastModel {
         precipitationProbabilityMax: precipitationProbabilityMaxes[index],
       );
     });
-  }
-
-  static double _toDouble(dynamic value) {
-    if (value == null) return 0.0;
-    return value is double ? value : double.parse(value.toString());
-  }
-
-  static int _toInt(dynamic value) {
-    if (value == null) return 0;
-    return value is int ? value : int.parse(value.toString());
   }
 }

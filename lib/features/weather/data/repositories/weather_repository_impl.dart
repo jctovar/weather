@@ -23,18 +23,15 @@ class WeatherRepositoryImpl implements WeatherRepository {
     required double longitude,
   }) async {
     try {
-      // Try to fetch from API
       final weatherModel = await apiDataSource.getCurrentWeather(
         latitude: latitude,
         longitude: longitude,
       );
 
-      // Cache the result
       await cacheDataSource.saveCurrentWeather(weatherModel);
 
       return Right(weatherModel.toEntity());
     } on OpenMeteoApiException {
-      // Fallback to cache on API failure
       final cached = await cacheDataSource.getCurrentWeather();
       if (cached != null) {
         return Right(cached.toEntity());

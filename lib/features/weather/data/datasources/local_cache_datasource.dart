@@ -33,10 +33,15 @@ class LocalCacheDataSource {
     }
   }
 
-  /// Gets cached weather data if available and not expired.
-  Future<WeatherModel?> getCurrentWeather() async {
+  // ── Generic helpers ───────────────────────────────────────────
+
+  Future<T?> _get<T>(
+    String key,
+    T Function(Map<String, dynamic>) fromJson,
+    String label,
+  ) async {
     try {
-      final data = _box?.get(AppConstants.currentWeatherKey);
+      final data = _box?.get(key);
       if (data == null) return null;
 
       final cached = jsonDecode(data) as Map<String, dynamic>;
@@ -44,26 +49,47 @@ class LocalCacheDataSource {
 
       if (DateTime.now().difference(timestamp).inSeconds >
           AppConstants.cacheTtlSeconds) {
-        AppLogger.cache('Current weather expired, clearing');
-        await clearCurrentWeather();
+        AppLogger.cache('$label expired, clearing');
+        await _box?.delete(key);
         return null;
       }
 
-      return WeatherModel.fromJson(
-        cached['data'] as Map<String, dynamic>,
-      );
+      return fromJson(cached['data'] as Map<String, dynamic>);
     } catch (e) {
-      AppLogger.error('Error reading cache: $e');
+      AppLogger.error('Error reading $label cache: $e');
       return null;
     }
   }
 
-  /// Saves weather data to cache.
-  Future<void> saveCurrentWeather(WeatherModel weather) async {
+  Future<void> _save(
+    String key,
+    Map<String, dynamic> data,
+    String logMessage,
+  ) async {
     try {
-      final data = {
+      final payload = {
         'timestamp': DateTime.now().toIso8601String(),
-        'data': {
+        'data': data,
+      };
+      await _box?.put(key, jsonEncode(payload));
+      AppLogger.cache(logMessage);
+    } catch (e) {
+      AppLogger.error('Error saving to cache: $e');
+      throw CacheException('Failed to save: $e');
+    }
+  }
+
+  // ── Current weather ───────────────────────────────────────────
+
+  Future<WeatherModel?> getCurrentWeather() => _get(
+        AppConstants.currentWeatherKey,
+        WeatherModel.fromJson,
+        'Current weather',
+      );
+
+  Future<void> saveCurrentWeather(WeatherModel weather) => _save(
+        AppConstants.currentWeatherKey,
+        {
           'current': {
             'temperature_2m': weather.temperature,
             'apparent_temperature': weather.apparentTemperature,
@@ -76,55 +102,24 @@ class LocalCacheDataSource {
             'time': weather.time.toIso8601String(),
           },
         },
-      };
-
-      await _box?.put(
-        AppConstants.currentWeatherKey,
-        jsonEncode(data),
+        'Current weather cached (${weather.temperature}°C)',
       );
-      AppLogger.cache('Current weather cached (${weather.temperature}°C)');
-    } catch (e) {
-      AppLogger.error('Error saving to cache: $e');
-      throw CacheException('Failed to save weather data: $e');
-    }
-  }
 
-  /// Clears cached current weather.
   Future<void> clearCurrentWeather() async {
     await _box?.delete(AppConstants.currentWeatherKey);
   }
 
-  /// Gets cached hourly forecast if available and not expired.
-  Future<HourlyForecastModel?> getHourlyForecast() async {
-    try {
-      final data = _box?.get(AppConstants.hourlyForecastKey);
-      if (data == null) return null;
+  // ── Hourly forecast ───────────────────────────────────────────
 
-      final cached = jsonDecode(data) as Map<String, dynamic>;
-      final timestamp = DateTime.parse(cached['timestamp'] as String);
-
-      if (DateTime.now().difference(timestamp).inSeconds >
-          AppConstants.cacheTtlSeconds) {
-        AppLogger.cache('Hourly forecast expired, clearing');
-        await clearHourlyForecast();
-        return null;
-      }
-
-      return HourlyForecastModel.fromJson(
-        cached['data'] as Map<String, dynamic>,
+  Future<HourlyForecastModel?> getHourlyForecast() => _get(
+        AppConstants.hourlyForecastKey,
+        HourlyForecastModel.fromJson,
+        'Hourly forecast',
       );
-    } catch (e) {
-      AppLogger.error('Error reading hourly forecast cache: $e');
-      return null;
-    }
-  }
 
-  /// Saves hourly forecast to cache.
-  Future<void> saveHourlyForecast(HourlyForecastModel forecast) async {
-    try {
-      final data = {
-        'timestamp': DateTime.now().toIso8601String(),
-        'data': {
+  Future<void> saveHourlyForecast(HourlyForecastModel forecast) => _save(
+        AppConstants.hourlyForecastKey,
+        {
           'hourly': {
             'time': forecast.times.map((e) => e.toIso8601String()).toList(),
             'temperature_2m': forecast.temperatures,
@@ -134,55 +129,24 @@ class LocalCacheDataSource {
             'wind_speed_10m': forecast.windSpeeds,
           },
         },
-      };
-
-      await _box?.put(
-        AppConstants.hourlyForecastKey,
-        jsonEncode(data),
+        'Hourly forecast cached (${forecast.times.length} entries)',
       );
-      AppLogger.cache('Hourly forecast cached (${forecast.times.length} entries)');
-    } catch (e) {
-      AppLogger.error('Error saving hourly forecast to cache: $e');
-      throw CacheException('Failed to save hourly forecast: $e');
-    }
-  }
 
-  /// Clears cached hourly forecast.
   Future<void> clearHourlyForecast() async {
     await _box?.delete(AppConstants.hourlyForecastKey);
   }
 
-  /// Gets cached daily forecast if available and not expired.
-  Future<DailyForecastModel?> getDailyForecast() async {
-    try {
-      final data = _box?.get(AppConstants.dailyForecastKey);
-      if (data == null) return null;
+  // ── Daily forecast ────────────────────────────────────────────
 
-      final cached = jsonDecode(data) as Map<String, dynamic>;
-      final timestamp = DateTime.parse(cached['timestamp'] as String);
-
-      if (DateTime.now().difference(timestamp).inSeconds >
-          AppConstants.cacheTtlSeconds) {
-        AppLogger.cache('Daily forecast expired, clearing');
-        await clearDailyForecast();
-        return null;
-      }
-
-      return DailyForecastModel.fromJson(
-        cached['data'] as Map<String, dynamic>,
+  Future<DailyForecastModel?> getDailyForecast() => _get(
+        AppConstants.dailyForecastKey,
+        DailyForecastModel.fromJson,
+        'Daily forecast',
       );
-    } catch (e) {
-      AppLogger.error('Error reading daily forecast cache: $e');
-      return null;
-    }
-  }
 
-  /// Saves daily forecast to cache.
-  Future<void> saveDailyForecast(DailyForecastModel forecast) async {
-    try {
-      final data = {
-        'timestamp': DateTime.now().toIso8601String(),
-        'data': {
+  Future<void> saveDailyForecast(DailyForecastModel forecast) => _save(
+        AppConstants.dailyForecastKey,
+        {
           'daily': {
             'time': forecast.dates.map((e) => e.toIso8601String()).toList(),
             'weather_code': forecast.weatherCodes,
@@ -196,25 +160,15 @@ class LocalCacheDataSource {
                 forecast.precipitationProbabilityMaxes,
           },
         },
-      };
-
-      await _box?.put(
-        AppConstants.dailyForecastKey,
-        jsonEncode(data),
+        'Daily forecast cached (${forecast.dates.length} days)',
       );
-      AppLogger.cache('Daily forecast cached (${forecast.dates.length} days)');
-    } catch (e) {
-      AppLogger.error('Error saving daily forecast to cache: $e');
-      throw CacheException('Failed to save daily forecast: $e');
-    }
-  }
 
-  /// Clears cached daily forecast.
   Future<void> clearDailyForecast() async {
     await _box?.delete(AppConstants.dailyForecastKey);
   }
 
-  /// Clears all cached data.
+  // ── All cache ─────────────────────────────────────────────────
+
   Future<void> clearAll() async {
     await _box?.clear();
     AppLogger.cache('All cache cleared');

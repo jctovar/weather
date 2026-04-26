@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:weather/core/utils/weather_code_mapper.dart';
 import 'package:weather/features/weather/domain/entities/hourly_forecast.dart';
 
 /// Horizontal list widget displaying hourly forecast.
@@ -39,7 +40,7 @@ class HourlyForecastList extends StatelessWidget {
                     style: theme.textTheme.labelSmall,
                   ),
                   Icon(
-                    _getWeatherIcon(hour.weatherCode),
+                    WeatherCodeMapper.icon(hour.weatherCode),
                     size: 24,
                     color: theme.colorScheme.primary,
                   ),
@@ -74,39 +75,4 @@ class HourlyForecastList extends StatelessWidget {
     );
   }
 
-  IconData _getWeatherIcon(int code) {
-    switch (code) {
-      case 0:
-        return Icons.wb_sunny;
-      case 1:
-      case 2:
-        return Icons.cloud;
-      case 3:
-        return Icons.cloud;
-      case 45:
-      case 48:
-        return Icons.foggy;
-      case 51:
-      case 53:
-      case 55:
-      case 61:
-        return Icons.bubble_chart;
-      case 63:
-      case 65:
-      case 80:
-      case 81:
-      case 82:
-        return Icons.water_drop;
-      case 71:
-      case 73:
-      case 75:
-        return Icons.ac_unit;
-      case 95:
-      case 96:
-      case 99:
-        return Icons.thunderstorm;
-      default:
-        return Icons.cloud;
-    }
-  }
 }

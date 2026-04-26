@@ -1,3 +1,5 @@
+import 'package:weather/core/utils/json_helpers.dart';
+import 'package:weather/core/utils/weather_code_mapper.dart';
 import 'package:weather/features/weather/domain/entities/weather.dart';
 
 /// Data model for current weather from Open-Meteo API.
@@ -28,14 +30,14 @@ class WeatherModel {
     final current = json['current'] as Map<String, dynamic>;
 
     return WeatherModel(
-      temperature: _toDouble(current['temperature_2m']),
-      apparentTemperature: _toDouble(current['apparent_temperature']),
-      humidity: _toInt(current['relative_humidity_2m']),
-      precipitation: _toDouble(current['precipitation']),
-      rain: _toDouble(current['rain']),
-      weatherCode: _toInt(current['weather_code']),
-      windSpeed: _toDouble(current['wind_speed_10m']),
-      isDay: _toInt(current['is_day']) == 1,
+      temperature: jsonToDouble(current['temperature_2m']),
+      apparentTemperature: jsonToDouble(current['apparent_temperature']),
+      humidity: jsonToInt(current['relative_humidity_2m']),
+      precipitation: jsonToDouble(current['precipitation']),
+      rain: jsonToDouble(current['rain']),
+      weatherCode: jsonToInt(current['weather_code']),
+      windSpeed: jsonToDouble(current['wind_speed_10m']),
+      isDay: jsonToInt(current['is_day']) == 1,
       time: DateTime.parse(current['time'] as String),
     );
   }
@@ -55,13 +57,6 @@ class WeatherModel {
     );
   }
 
-  static double _toDouble(dynamic value) {
-    if (value == null) return 0.0;
-    return value is double ? value : double.parse(value.toString());
-  }
-
-  static int _toInt(dynamic value) {
-    if (value == null) return 0;
-    return value is int ? value : int.parse(value.toString());
-  }
+  /// Returns a human-readable weather description based on WMO codes.
+  String get description => WeatherCodeMapper.description(weatherCode);
 }

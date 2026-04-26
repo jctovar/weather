@@ -19,18 +19,35 @@ class OpenMeteoApiDataSource {
 
   final Dio _dio;
 
+  Future<T> _fetch<T>({
+    required String label,
+    required Map<String, dynamic> queryParameters,
+    required T Function(Map<String, dynamic>) fromJson,
+  }) async {
+    try {
+      AppLogger.api(label);
+      final response = await _dio.get('/forecast', queryParameters: queryParameters);
+
+      if (response.statusCode == 200) {
+        return fromJson(response.data as Map<String, dynamic>);
+      } else {
+        throw OpenMeteoApiException('Failed: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      AppLogger.error('Dio error $label: ${e.message}');
+      throw OpenMeteoApiException('Network error: ${e.message}');
+    } catch (e) {
+      AppLogger.error('Unexpected error $label: $e');
+      rethrow;
+    }
+  }
+
   /// Fetches current weather data.
   Future<WeatherModel> getCurrentWeather({
     required double latitude,
     required double longitude,
-  }) async {
-    try {
-      AppLogger.api(
-        'Fetching current weather for ($latitude, $longitude)',
-      );
-
-      final response = await _dio.get(
-        '/forecast',
+  }) => _fetch(
+        label: 'Fetching current weather for ($latitude, $longitude)',
         queryParameters: {
           'latitude': latitude,
           'longitude': longitude,
@@ -38,36 +55,15 @@ class OpenMeteoApiDataSource {
               'temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,rain,weather_code,wind_speed_10m',
           'timezone': 'auto',
         },
+        fromJson: WeatherModel.fromJson,
       );
-
-      if (response.statusCode == 200) {
-        return WeatherModel.fromJson(response.data as Map<String, dynamic>);
-      } else {
-        throw OpenMeteoApiException(
-          'Failed to fetch weather: ${response.statusCode}',
-        );
-      }
-    } on DioException catch (e) {
-      AppLogger.error('Dio error fetching weather: ${e.message}');
-      throw OpenMeteoApiException('Network error: ${e.message}');
-    } catch (e) {
-      AppLogger.error('Unexpected error fetching weather: $e');
-      rethrow;
-    }
-  }
 
   /// Fetches hourly forecast data.
   Future<HourlyForecastModel> getHourlyForecast({
     required double latitude,
     required double longitude,
-  }) async {
-    try {
-      AppLogger.api(
-        'Fetching hourly forecast for ($latitude, $longitude)',
-      );
-
-      final response = await _dio.get(
-        '/forecast',
+  }) => _fetch(
+        label: 'Fetching hourly forecast for ($latitude, $longitude)',
         queryParameters: {
           'latitude': latitude,
           'longitude': longitude,
@@ -76,38 +72,15 @@ class OpenMeteoApiDataSource {
           'forecast_days': 2,
           'timezone': 'auto',
         },
+        fromJson: HourlyForecastModel.fromJson,
       );
-
-      if (response.statusCode == 200) {
-        return HourlyForecastModel.fromJson(
-          response.data as Map<String, dynamic>,
-        );
-      } else {
-        throw OpenMeteoApiException(
-          'Failed to fetch hourly forecast: ${response.statusCode}',
-        );
-      }
-    } on DioException catch (e) {
-      AppLogger.error('Dio error fetching hourly forecast: ${e.message}');
-      throw OpenMeteoApiException('Network error: ${e.message}');
-    } catch (e) {
-      AppLogger.error('Unexpected error fetching hourly forecast: $e');
-      rethrow;
-    }
-  }
 
   /// Fetches daily forecast data.
   Future<DailyForecastModel> getDailyForecast({
     required double latitude,
     required double longitude,
-  }) async {
-    try {
-      AppLogger.api(
-        'Fetching daily forecast for ($latitude, $longitude)',
-      );
-
-      final response = await _dio.get(
-        '/forecast',
+  }) => _fetch(
+        label: 'Fetching daily forecast for ($latitude, $longitude)',
         queryParameters: {
           'latitude': latitude,
           'longitude': longitude,
@@ -116,23 +89,6 @@ class OpenMeteoApiDataSource {
           'forecast_days': 7,
           'timezone': 'auto',
         },
+        fromJson: DailyForecastModel.fromJson,
       );
-
-      if (response.statusCode == 200) {
-        return DailyForecastModel.fromJson(
-          response.data as Map<String, dynamic>,
-        );
-      } else {
-        throw OpenMeteoApiException(
-          'Failed to fetch daily forecast: ${response.statusCode}',
-        );
-      }
-    } on DioException catch (e) {
-      AppLogger.error('Dio error fetching daily forecast: ${e.message}');
-      throw OpenMeteoApiException('Network error: ${e.message}');
-    } catch (e) {
-      AppLogger.error('Unexpected error fetching daily forecast: $e');
-      rethrow;
-    }
-  }
 }

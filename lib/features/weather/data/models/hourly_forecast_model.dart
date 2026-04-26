@@ -1,3 +1,4 @@
+import 'package:weather/core/utils/json_helpers.dart';
 import 'package:weather/features/weather/domain/entities/hourly_forecast.dart';
 
 /// Data model for hourly forecast from Open-Meteo API.
@@ -19,20 +20,20 @@ class HourlyForecastModel {
           .map((e) => DateTime.parse(e as String))
           .toList(),
       temperatures: (hourly['temperature_2m'] as List<dynamic>)
-          .map((e) => _toDouble(e))
+          .map((e) => jsonToDouble(e))
           .toList(),
       precipitationProbabilities: (hourly['precipitation_probability']
               as List<dynamic>)
-          .map((e) => _toDouble(e))
+          .map((e) => jsonToDouble(e))
           .toList(),
       precipitations: (hourly['precipitation'] as List<dynamic>)
-          .map((e) => _toDouble(e))
+          .map((e) => jsonToDouble(e))
           .toList(),
       weatherCodes: (hourly['weather_code'] as List<dynamic>)
-          .map((e) => _toInt(e))
+          .map((e) => jsonToInt(e))
           .toList(),
       windSpeeds: (hourly['wind_speed_10m'] as List<dynamic>)
-          .map((e) => _toDouble(e))
+          .map((e) => jsonToDouble(e))
           .toList(),
     );
   }
@@ -56,15 +57,5 @@ class HourlyForecastModel {
         windSpeed: windSpeeds[index],
       );
     });
-  }
-
-  static double _toDouble(dynamic value) {
-    if (value == null) return 0.0;
-    return value is double ? value : double.parse(value.toString());
-  }
-
-  static int _toInt(dynamic value) {
-    if (value == null) return 0;
-    return value is int ? value : int.parse(value.toString());
   }
 }
