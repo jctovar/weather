@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:weather/core/network/dio_client.dart';
 import 'package:weather/core/utils/app_logger.dart';
@@ -50,6 +51,12 @@ class WeatherNotifier extends Notifier<WeatherState> {
       // Get user's location
       final position = await _determinePosition();
 
+      // Resolve location name via reverse geocoding
+      final locationName = await _resolveLocationName(
+        position.latitude,
+        position.longitude,
+      );
+
       // Fetch all weather data in parallel
       final weatherResult = await _getCurrentWeather(
         latitude: position.latitude,
@@ -83,6 +90,7 @@ class WeatherNotifier extends Notifier<WeatherState> {
                     currentWeather: weather,
                     hourlyForecast: hourly,
                     dailyForecast: daily,
+                    locationName: locationName,
                   );
                 },
               );
@@ -93,6 +101,30 @@ class WeatherNotifier extends Notifier<WeatherState> {
     } catch (e) {
       AppLogger.error('Failed to initialize weather: $e');
       state = WeatherError('Failed to load weather: $e');
+    }
+  }
+
+  /// Resolves a human-readable location name from coordinates.
+  /// Falls back to coordinates if geocoding fails.
+  Future<String> _resolveLocationName(double lat, double lon) async {
+    try {
+      final placemarks = await placemarkFromCoordinates(lat, lon);
+      if (placemarks.isEmpty) {
+        return '${lat.toStringAsFixed(2)}, ${lon.toStringAsFixed(2)}';
+      }
+      final place = placemarks.first;
+      final name = place.locality ??
+          place.subLocality ??
+          place.administrativeArea ??
+          place.country;
+      if (name == null || name.isEmpty) {
+        return '${lat.toStringAsFixed(2)}, ${lon.toStringAsFixed(2)}';
+      }
+      AppLogger.location('Resolved: $name');
+      return name;
+    } catch (e) {
+      AppLogger.warn('Geocoding failed, using coordinates: $e');
+      return '${lat.toStringAsFixed(2)}, ${lon.toStringAsFixed(2)}';
     }
   }
 

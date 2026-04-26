@@ -7,9 +7,11 @@ class CurrentWeatherCard extends StatelessWidget {
   const CurrentWeatherCard({
     super.key,
     required this.weather,
+    this.locationName,
   });
 
   final Weather weather;
+  final String? locationName;
 
   @override
   Widget build(BuildContext context) {
@@ -30,6 +32,18 @@ class CurrentWeatherCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
+
+            // Location name
+            if (locationName != null) ...[
+              Text(
+                locationName!,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
 
             // Weather condition
             Text(

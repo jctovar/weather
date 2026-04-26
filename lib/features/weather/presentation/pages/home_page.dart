@@ -32,13 +32,14 @@ class HomePage extends ConsumerWidget {
               child: CircularProgressIndicator(),
             ),
           WeatherLoaded(:final currentWeather, :final hourlyForecast,
-              :final dailyForecast) =>
+              :final dailyForecast, :final locationName) =>
             _buildSuccessContent(
               context,
               weatherNotifier,
               currentWeather,
               hourlyForecast,
               dailyForecast,
+              locationName,
             ),
           WeatherError(:final message) => Center(
               child: Column(
@@ -82,11 +83,12 @@ class HomePage extends ConsumerWidget {
     Weather currentWeather,
     List<HourlyForecast> hourlyForecast,
     List<DailyForecast> dailyForecast,
+    String locationName,
   ) {
     return CustomScrollView(
       slivers: [
         SliverAppBar.large(
-          title: const Text('Clima Actual'),
+          title: Text(locationName),
           actions: [
             IconButton(
               icon: const Icon(Icons.refresh),
@@ -99,7 +101,10 @@ class HomePage extends ConsumerWidget {
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.all(16.0),
-            child: CurrentWeatherCard(weather: currentWeather),
+            child: CurrentWeatherCard(
+              weather: currentWeather,
+              locationName: locationName,
+            ),
           ),
         ),
         SliverToBoxAdapter(

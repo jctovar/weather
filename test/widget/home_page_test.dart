@@ -126,6 +126,7 @@ void main() {
                   currentWeather: tWeather,
                   hourlyForecast: tHourly,
                   dailyForecast: tDaily,
+                  locationName: 'Madrid',
                 ),
               ),
             ),
@@ -140,6 +141,7 @@ void main() {
       expect(find.byType(HourlyForecastList), findsOneWidget);
       expect(find.byType(SliverAppBar), findsOneWidget);
       expect(find.byType(RefreshIndicator), findsOneWidget);
+      expect(find.text('Madrid'), findsWidgets);
 
       addTearDown(tester.view.resetPhysicalSize);
     });
@@ -187,6 +189,7 @@ void main() {
                   currentWeather: tWeather,
                   hourlyForecast: const [],
                   dailyForecast: const [],
+                  locationName: '40.42, -3.70',
                 ),
               ),
             ),

@@ -23,11 +23,13 @@ class WeatherLoaded extends WeatherState {
     required this.currentWeather,
     required this.hourlyForecast,
     required this.dailyForecast,
+    required this.locationName,
   });
 
   final Weather currentWeather;
   final List<HourlyForecast> hourlyForecast;
   final List<DailyForecast> dailyForecast;
+  final String locationName;
 }
 
 /// Error state when data fetching fails.
