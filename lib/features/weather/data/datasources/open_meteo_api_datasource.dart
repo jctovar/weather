@@ -47,7 +47,7 @@ class OpenMeteoApiDataSource {
     required double latitude,
     required double longitude,
   }) => _fetch(
-        label: 'Fetching current weather for ($latitude, $longitude)',
+        label: 'Fetching current weather',
         queryParameters: {
           'latitude': latitude,
           'longitude': longitude,
@@ -63,7 +63,7 @@ class OpenMeteoApiDataSource {
     required double latitude,
     required double longitude,
   }) => _fetch(
-        label: 'Fetching hourly forecast for ($latitude, $longitude)',
+        label: 'Fetching hourly forecast',
         queryParameters: {
           'latitude': latitude,
           'longitude': longitude,
@@ -80,7 +80,7 @@ class OpenMeteoApiDataSource {
     required double latitude,
     required double longitude,
   }) => _fetch(
-        label: 'Fetching daily forecast for ($latitude, $longitude)',
+        label: 'Fetching daily forecast',
         queryParameters: {
           'latitude': latitude,
           'longitude': longitude,

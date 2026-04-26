@@ -102,7 +102,9 @@ class WeatherNotifier extends Notifier<WeatherState> {
       );
     } catch (e) {
       AppLogger.error('Failed to initialize weather: $e');
-      state = WeatherError('Failed to load weather: $e');
+      state = const WeatherError(
+        'No se pudo cargar el clima. Verifica tu conexión e inténtalo de nuevo.',
+      );
     }
   }
 
@@ -161,7 +163,9 @@ class WeatherNotifier extends Notifier<WeatherState> {
 
     // When we reach here, permissions are granted and we can continue.
     final position = await Geolocator.getCurrentPosition();
-    AppLogger.location('Got position: ${position.latitude}, ${position.longitude}');
+    AppLogger.location(
+      'Got position: ${_redact(position.latitude)}, ${_redact(position.longitude)}',
+    );
     return position;
   }
 
@@ -169,6 +173,12 @@ class WeatherNotifier extends Notifier<WeatherState> {
   Future<void> refresh() async {
     state = const WeatherLoading();
     await init();
+  }
+
+  /// Redacts a coordinate for safe logging (replaces last digits with 'x').
+  String _redact(double value) {
+    final s = value.toStringAsFixed(2);
+    return '${s.substring(0, s.length - 1)}x';
   }
 }
 
