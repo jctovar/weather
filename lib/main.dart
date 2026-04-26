@@ -21,7 +21,8 @@ void main() async {
   );
 }
 
-/// Root widget of the weather application.
+/// Root widget that sets up Material 3 theming and triggers weather loading
+/// on the first frame.
 class WeatherApp extends ConsumerWidget {
   const WeatherApp({super.key});
 

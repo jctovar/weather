@@ -57,6 +57,6 @@ class WeatherModel {
     );
   }
 
-  /// Returns a human-readable weather description based on WMO codes.
+  /// Human-readable weather description via [WeatherCodeMapper].
   String get description => WeatherCodeMapper.description(weatherCode);
 }

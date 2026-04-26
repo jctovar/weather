@@ -54,7 +54,8 @@ class WeatherNotifier extends Notifier<WeatherState> {
     );
   }
 
-  /// Initializes the cache and loads weather data.
+  /// Initializes cache, resolves device location, then fetches current,
+  /// hourly and daily weather. Falls back to [WeatherError] on any failure.
   Future<void> init() async {
     state = const WeatherLoading();
 
