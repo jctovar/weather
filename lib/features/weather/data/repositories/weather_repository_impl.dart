@@ -17,15 +17,35 @@ class WeatherRepositoryImpl implements WeatherRepository {
   final OpenMeteoApiDataSource apiDataSource;
   final LocalCacheDataSource cacheDataSource;
 
+  /// Retries an operation with exponential backoff.
+  Future<T> _withRetry<T>(
+    Future<T> Function() operation, {
+    int maxRetries = 3,
+  }) async {
+    int attempt = 0;
+    while (true) {
+      try {
+        return await operation();
+      } catch (e) {
+        attempt++;
+        if (attempt >= maxRetries) rethrow;
+        final delay = Duration(milliseconds: 1000 << (attempt - 1));
+        await Future.delayed(delay);
+      }
+    }
+  }
+
   @override
   Future<Either<Failure, Weather>> getCurrentWeather({
     required double latitude,
     required double longitude,
   }) async {
     try {
-      final weatherModel = await apiDataSource.getCurrentWeather(
-        latitude: latitude,
-        longitude: longitude,
+      final weatherModel = await _withRetry(
+        () => apiDataSource.getCurrentWeather(
+          latitude: latitude,
+          longitude: longitude,
+        ),
       );
 
       await cacheDataSource.saveCurrentWeather(weatherModel);
@@ -50,9 +70,11 @@ class WeatherRepositoryImpl implements WeatherRepository {
     required double longitude,
   }) async {
     try {
-      final forecastModel = await apiDataSource.getHourlyForecast(
-        latitude: latitude,
-        longitude: longitude,
+      final forecastModel = await _withRetry(
+        () => apiDataSource.getHourlyForecast(
+          latitude: latitude,
+          longitude: longitude,
+        ),
       );
 
       await cacheDataSource.saveHourlyForecast(forecastModel);
@@ -79,9 +101,11 @@ class WeatherRepositoryImpl implements WeatherRepository {
     required double longitude,
   }) async {
     try {
-      final forecastModel = await apiDataSource.getDailyForecast(
-        latitude: latitude,
-        longitude: longitude,
+      final forecastModel = await _withRetry(
+        () => apiDataSource.getDailyForecast(
+          latitude: latitude,
+          longitude: longitude,
+        ),
       );
 
       await cacheDataSource.saveDailyForecast(forecastModel);

@@ -1,15 +1,19 @@
 import 'package:dartz/dartz.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:weather/core/error/failures.dart';
-import 'package:weather/core/network/dio_client.dart';
+import 'package:weather/core/network/dio_provider.dart';
 import 'package:weather/core/utils/app_logger.dart';
 import 'package:weather/core/utils/weather_code_mapper.dart';
 import 'package:weather/features/home_widget/data/services/home_widget_service.dart';
 import 'package:weather/features/weather/data/datasources/local_cache_datasource.dart';
 import 'package:weather/features/weather/data/datasources/open_meteo_api_datasource.dart';
 import 'package:weather/features/weather/data/repositories/weather_repository_impl.dart';
+import 'package:weather/features/weather/domain/entities/daily_forecast.dart';
+import 'package:weather/features/weather/domain/entities/hourly_forecast.dart';
+import 'package:weather/features/weather/domain/entities/weather.dart';
 import 'package:weather/features/weather/domain/usecases/get_current_weather.dart';
 import 'package:weather/features/weather/domain/usecases/get_daily_forecast.dart';
 import 'package:weather/features/weather/domain/usecases/get_hourly_forecast.dart';
@@ -23,19 +27,23 @@ class WeatherNotifier extends Notifier<WeatherState> {
   late final GetHourlyForecast _getHourlyForecast;
   late final GetDailyForecast _getDailyForecast;
 
-  /// Prevents concurrent weather fetches.
-  bool _isLoading = false;
+  /// Cancel tokens for in-flight requests.
+  CancelToken? _currentWeatherToken;
+  CancelToken? _hourlyForecastToken;
+  CancelToken? _dailyForecastToken;
 
   LocalCacheDataSource get cacheDataSource => _cacheDataSource;
 
   @override
   WeatherState build() {
-    _initRepository();
-    return const WeatherInitial();
+    // Use injected Dio from provider
+    final dio = ref.read(dioProvider);
+    _initRepository(dio);
+    return const WeatherLoading();
   }
 
-  void _initRepository() {
-    final apiDataSource = OpenMeteoApiDataSource(dio: createDioClient());
+  void _initRepository(Dio dio) {
+    final apiDataSource = OpenMeteoApiDataSource(dio: dio);
     _cacheDataSource = LocalCacheDataSource();
 
     _repository = WeatherRepositoryImpl(
@@ -48,23 +56,9 @@ class WeatherNotifier extends Notifier<WeatherState> {
     _getDailyForecast = GetDailyForecast(_repository);
   }
 
-  /// Unwraps an Either result, setting error state on failure.
-  T? _unwrap<T>(Either<Failure, T> result) {
-    return result.fold(
-      (failure) {
-        state = WeatherError(failure.message);
-        return null;
-      },
-      (data) => data,
-    );
-  }
-
   /// Initializes cache, resolves device location, then fetches current,
-  /// hourly and daily weather. Falls back to [WeatherError] on any failure.
-  /// Ignored if a fetch is already in progress.
+  /// hourly and daily weather concurrently. Allows partial success.
   Future<void> init() async {
-    if (_isLoading) return;
-    _isLoading = true;
     state = const WeatherLoading();
 
     try {
@@ -85,28 +79,59 @@ class WeatherNotifier extends Notifier<WeatherState> {
         position.longitude,
       );
 
-      // Fetch all weather data
-      final weatherResult = await _getCurrentWeather(
-        latitude: position.latitude,
-        longitude: position.longitude,
+      // Fetch all weather data concurrently with cancellation support
+      final results = await Future.wait([
+        _fetchWithCancellation(
+          () => _getCurrentWeather(
+            latitude: position.latitude,
+            longitude: position.longitude,
+          ),
+          () => _currentWeatherToken,
+          (token) => _currentWeatherToken = token,
+        ),
+        _fetchWithCancellation(
+          () => _getHourlyForecast(
+            latitude: position.latitude,
+            longitude: position.longitude,
+          ),
+          () => _hourlyForecastToken,
+          (token) => _hourlyForecastToken = token,
+        ),
+        _fetchWithCancellation(
+          () => _getDailyForecast(
+            latitude: position.latitude,
+            longitude: position.longitude,
+          ),
+          () => _dailyForecastToken,
+          (token) => _dailyForecastToken = token,
+        ),
+      ]);
+
+      final weatherResult = results[0] as Either<Failure, dynamic>;
+      final hourlyResult = results[1] as Either<Failure, dynamic>;
+      final dailyResult = results[2] as Either<Failure, dynamic>;
+
+      // Allow partial success: use data if available, fallback to empty/defaults
+      final weather = weatherResult.fold(
+        (failure) => null,
+        (data) => data,
       );
-      final hourlyResult = await _getHourlyForecast(
-        latitude: position.latitude,
-        longitude: position.longitude,
+      final hourly = hourlyResult.fold(
+        (failure) => <dynamic>[],
+        (data) => data,
       );
-      final dailyResult = await _getDailyForecast(
-        latitude: position.latitude,
-        longitude: position.longitude,
+      final daily = dailyResult.fold(
+        (failure) => <dynamic>[],
+        (data) => data,
       );
 
-      final weather = _unwrap(weatherResult);
-      if (weather == null) return;
-
-      final hourly = _unwrap(hourlyResult);
-      if (hourly == null) return;
-
-      final daily = _unwrap(dailyResult);
-      if (daily == null) return;
+      // If all three failed, show error
+      if (weather == null && hourly.isEmpty && daily.isEmpty) {
+        state = const WeatherError(
+          'No se pudo cargar el clima. Verifica tu conexión e inténtalo de nuevo.',
+        );
+        return;
+      }
 
       state = WeatherLoaded(
         currentWeather: weather,
@@ -115,23 +140,50 @@ class WeatherNotifier extends Notifier<WeatherState> {
         locationName: locationName,
       );
 
-      // Update home screen widget
-      await HomeWidgetService.saveWeatherData(
-        locationName: locationName,
-        temperature: weather.temperature,
-        weatherCode: weather.weatherCode,
-        isDay: weather.isDay,
-        description: WeatherCodeMapper.description(weather.weatherCode),
-        tempMax: daily.isNotEmpty ? daily.first.temperatureMax : null,
-        tempMin: daily.isNotEmpty ? daily.first.temperatureMin : null,
-      );
+      // Update home screen widget if we have current weather
+      if (weather != null) {
+        await HomeWidgetService.saveWeatherData(
+          locationName: locationName,
+          temperature: weather.temperature,
+          weatherCode: weather.weatherCode,
+          isDay: weather.isDay,
+          description: WeatherCodeMapper.description(weather.weatherCode),
+          tempMax: daily.isNotEmpty ? daily.first.temperatureMax : null,
+          tempMin: daily.isNotEmpty ? daily.first.temperatureMin : null,
+        );
+      }
     } catch (e) {
       AppLogger.error('Failed to initialize weather: $e');
       state = const WeatherError(
         'No se pudo cargar el clima. Verifica tu conexión e inténtalo de nuevo.',
       );
-    } finally {
-      _isLoading = false;
+    }
+  }
+
+  /// Wraps a fetch operation with CancelToken support.
+  Future<Either<Failure, T>> _fetchWithCancellation<T>(
+    Future<Either<Failure, T>> Function() fetchFn,
+    CancelToken? Function() getToken,
+    void Function(CancelToken) setToken,
+  ) async {
+    // Cancel previous in-flight request
+    final existingToken = getToken();
+    if (existingToken != null && !existingToken.isCancelled) {
+      existingToken.cancel('Cancelled by new request');
+    }
+
+    // Create new cancel token
+    final newToken = CancelToken();
+    setToken(newToken);
+
+    try {
+      return await fetchFn();
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.cancel) {
+        AppLogger.info('Request cancelled');
+        return Left(NetworkFailure('Request cancelled'));
+      }
+      return Left(NetworkFailure(e.message ?? 'Network error'));
     }
   }
 
@@ -213,3 +265,57 @@ class WeatherNotifier extends Notifier<WeatherState> {
 final weatherProvider = NotifierProvider<WeatherNotifier, WeatherState>(
   WeatherNotifier.new,
 );
+
+/// Derived provider that only watches current weather data.
+final currentWeatherProvider = Provider<Weather?>((ref) {
+  final state = ref.watch(weatherProvider);
+  return switch (state) {
+    WeatherLoaded(:final currentWeather) => currentWeather,
+    _ => null,
+  };
+});
+
+/// Derived provider that only watches hourly forecast data.
+final hourlyForecastProvider = Provider<List<HourlyForecast>>((ref) {
+  final state = ref.watch(weatherProvider);
+  return switch (state) {
+    WeatherLoaded(:final hourlyForecast) => hourlyForecast,
+    _ => const [],
+  };
+});
+
+/// Derived provider that only watches daily forecast data.
+final dailyForecastProvider = Provider<List<DailyForecast>>((ref) {
+  final state = ref.watch(weatherProvider);
+  return switch (state) {
+    WeatherLoaded(:final dailyForecast) => dailyForecast,
+    _ => const [],
+  };
+});
+
+/// Derived provider that only watches location name.
+final locationNameProvider = Provider<String?>((ref) {
+  final state = ref.watch(weatherProvider);
+  return switch (state) {
+    WeatherLoaded(:final locationName) => locationName,
+    _ => null,
+  };
+});
+
+/// Derived provider that watches loading state.
+final isWeatherLoadingProvider = Provider<bool>((ref) {
+  final state = ref.watch(weatherProvider);
+  return switch (state) {
+    WeatherLoading() => true,
+    _ => false,
+  };
+});
+
+/// Derived provider that watches error state.
+final weatherErrorProvider = Provider<String?>((ref) {
+  final state = ref.watch(weatherProvider);
+  return switch (state) {
+    WeatherError(:final message) => message,
+    _ => null,
+  };
+});

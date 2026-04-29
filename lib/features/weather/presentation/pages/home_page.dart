@@ -26,14 +26,15 @@ class HomePage extends ConsumerWidget {
           await weatherNotifier.refresh();
         },
         child: switch (weatherState) {
-          WeatherInitial() => const Center(
+          WeatherLoading() || WeatherInitial() => const Center(
               child: CircularProgressIndicator(),
             ),
-          WeatherLoading() => const Center(
-              child: CircularProgressIndicator(),
-            ),
-          WeatherLoaded(:final currentWeather, :final hourlyForecast,
-              :final dailyForecast, :final locationName) =>
+          WeatherLoaded(
+            :final currentWeather,
+            :final hourlyForecast,
+            :final dailyForecast,
+            :final locationName
+          ) =>
             _buildSuccessContent(
               context,
               weatherNotifier,
@@ -81,7 +82,7 @@ class HomePage extends ConsumerWidget {
   Widget _buildSuccessContent(
     BuildContext context,
     WeatherNotifier weatherNotifier,
-    Weather currentWeather,
+    Weather? currentWeather,
     List<HourlyForecast> hourlyForecast,
     List<DailyForecast> dailyForecast,
     String locationName,
@@ -108,40 +109,45 @@ class HomePage extends ConsumerWidget {
             ),
           ],
         ),
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: CurrentWeatherCard(
-              weather: currentWeather,
-              locationName: locationName,
+        if (currentWeather != null)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: CurrentWeatherCard(
+                weather: currentWeather,
+                locationName: locationName,
+              ),
             ),
           ),
-        ),
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Text(
-              'Pronóstico por Hora',
-              style: Theme.of(context).textTheme.titleMedium,
+        if (hourlyForecast.isNotEmpty) ...[
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Text(
+                'Pronóstico por Hora',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
             ),
           ),
-        ),
-        SliverToBoxAdapter(
-          child: SizedBox(
-            height: 120,
-            child: HourlyForecastList(forecast: hourlyForecast),
-          ),
-        ),
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Text(
-              'Pronóstico por Día',
-              style: Theme.of(context).textTheme.titleMedium,
+          SliverToBoxAdapter(
+            child: SizedBox(
+              height: 120,
+              child: HourlyForecastList(forecast: hourlyForecast),
             ),
           ),
-        ),
-        DailyForecastList(forecast: dailyForecast),
+        ],
+        if (dailyForecast.isNotEmpty) ...[
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Text(
+                'Pronóstico por Día',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+          ),
+          DailyForecastList(forecast: dailyForecast),
+        ],
         const SliverToBoxAdapter(
           child: SizedBox(height: 16),
         ),

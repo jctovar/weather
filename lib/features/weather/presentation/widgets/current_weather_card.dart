@@ -10,13 +10,14 @@ class CurrentWeatherCard extends StatelessWidget {
     this.locationName,
   });
 
+  static final _timeFormat = DateFormat.Hm();
+
   final Weather weather;
   final String? locationName;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final dateFormat = DateFormat.Hm();
 
     return Card(
       elevation: 4,
@@ -98,7 +99,7 @@ class CurrentWeatherCard extends StatelessWidget {
                   context,
                   Icons.schedule,
                   'Actualizado',
-                  dateFormat.format(weather.time),
+                  _timeFormat.format(weather.time),
                 ),
               ],
             ),

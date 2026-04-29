@@ -10,18 +10,20 @@ class DailyForecastList extends StatelessWidget {
     required this.forecast,
   });
 
+  static final _dayFormat = DateFormat.EEEE();
+  static final _timeFormat = DateFormat.Hm();
+
   final List<DailyForecast> forecast;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final dayFormat = DateFormat.EEEE();
 
     return SliverList(
       delegate: SliverChildBuilderDelegate(
         (context, index) {
           final day = forecast[index];
-          final dayName = index == 0 ? 'Hoy' : dayFormat.format(day.date);
+          final dayName = index == 0 ? 'Hoy' : _dayFormat.format(day.date);
 
           return Card(
             margin: const EdgeInsets.symmetric(
@@ -74,7 +76,7 @@ class DailyForecastList extends StatelessWidget {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    DateFormat.Hm().format(day.sunrise),
+                    _timeFormat.format(day.sunrise),
                   ),
                   const SizedBox(width: 16),
                   Icon(
@@ -84,7 +86,7 @@ class DailyForecastList extends StatelessWidget {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    DateFormat.Hm().format(day.sunset),
+                    _timeFormat.format(day.sunset),
                   ),
                 ],
               ),

@@ -6,6 +6,7 @@ import 'package:weather/core/utils/app_logger.dart';
 import 'package:weather/features/weather/data/models/daily_forecast_model.dart';
 import 'package:weather/features/weather/data/models/hourly_forecast_model.dart';
 import 'package:weather/features/weather/data/models/weather_model.dart';
+import 'package:flutter/foundation.dart';
 
 /// Exception thrown when cache operations fail.
 class CacheException implements Exception {
@@ -44,7 +45,8 @@ class LocalCacheDataSource {
       final data = _box?.get(key);
       if (data == null) return null;
 
-      final cached = jsonDecode(data) as Map<String, dynamic>;
+      final cached =
+          await compute(jsonDecode, data) as Map<String, dynamic>;
       final timestamp = DateTime.parse(cached['timestamp'] as String);
 
       if (DateTime.now().difference(timestamp).inSeconds >
@@ -71,7 +73,8 @@ class LocalCacheDataSource {
         'timestamp': DateTime.now().toIso8601String(),
         'data': data,
       };
-      await _box?.put(key, jsonEncode(payload));
+      final encoded = await compute(jsonEncode, payload);
+      await _box?.put(key, encoded);
       AppLogger.cache(logMessage);
     } catch (e) {
       AppLogger.error('Error saving to cache: $e');

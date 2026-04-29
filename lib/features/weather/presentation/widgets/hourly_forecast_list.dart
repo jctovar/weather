@@ -10,21 +10,22 @@ class HourlyForecastList extends StatelessWidget {
     required this.forecast,
   });
 
+  static final _timeFormat = DateFormat.Hm();
+
   final List<HourlyForecast> forecast;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final timeFormat = DateFormat.Hm();
 
     // Show next 24 hours
-    final nextHours = forecast.take(24).toList();
+    final maxHours = forecast.length < 24 ? forecast.length : 24;
 
     return ListView.builder(
       scrollDirection: Axis.horizontal,
-      itemCount: nextHours.length,
+      itemCount: maxHours,
       itemBuilder: (context, index) {
-        final hour = nextHours[index];
+        final hour = forecast[index];
 
         return Container(
           width: 72,
@@ -36,7 +37,7 @@ class HourlyForecastList extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    index == 0 ? 'Ahora' : timeFormat.format(hour.time),
+                    index == 0 ? 'Ahora' : _timeFormat.format(hour.time),
                     style: theme.textTheme.labelSmall,
                   ),
                   Icon(
